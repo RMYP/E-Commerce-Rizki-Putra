@@ -1,0 +1,220 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  Admin
+  Guest
+}
+
+enum LoginType {
+  Regular
+  Google
+}
+
+enum Housing {
+  Apartement
+  House
+  Office
+  Dorm
+}
+
+enum TransactionStatus {
+  Success
+  Failed
+  Pending
+}
+
+model Auth {
+  id            String    @id @default(cuid())
+  userId        String    @unique
+  user          User      @relation(fields: [userId], references: [id])
+  email         String    @unique
+  accountStatus Boolean
+  password      String
+  loginType     LoginType @default(Regular)
+  timeStamp     DateTime
+}
+
+model AuthToken {
+  id         String    @id @default(cuid())
+  userId     String    @unique
+  user       User      @relation(fields: [userId], references: [id])
+  resetUrl   String?
+  resetToken String?
+  expiredIn  DateTime?
+  timeStamp  DateTime
+}
+
+// model User {
+//   id          String        @id @default(cuid())
+//   username    String
+//   name        String?
+//   phoneNum    String?       @unique
+//   role        Role          @default(Guest)
+//   timeStamp   DateTime
+//   Auth        Auth?
+//   Address     Address?
+//   Review      Review?
+//   Shop        Shop[]
+//   Transaction Transaction[]
+//   Chart       Chart[]
+//   AuthToken   AuthToken[]
+// }
+
+model Address {
+  id            String        @id @default(cuid())
+  userId        String        @unique
+  user          User          @relation(fields: [userId], references: [id])
+  housingType   Housing?
+  addressDetail String
+  recipientName String
+  phoneNum      String
+  timeStamp     DateTime
+  Shop          Shop[]
+  Transaction   Transaction[]
+}
+
+model Shop {
+  id        String    @id @default(cuid())
+  shopName  String?   @unique
+  addressId String
+  address   Address   @relation(fields: [addressId], references: [id])
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  productId String[]
+  timeStamp DateTime
+  Product   Product[]
+}
+
+model Transaction {
+  id         String               @id @default(cuid())
+  userId     String
+  user       User                 @relation(fields: [userId], references: [id])
+  addressId  String
+  Address    Address              @relation(fields: [addressId], references: [id])
+  totalPrice Float
+  status     TransactionStatus?   @default(Pending)
+  timeStamp  DateTime
+  products   TransactionProduct[]
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  productName String
+  shopId      String?
+  shop        Shop?    @relation(fields: [shopId], references: [id])
+  quantity    Int
+  category    String
+  price       Float
+  description String?
+  image       String?
+  timeStamp   DateTime
+  Review      Review[]
+  Wishlist    Chart[]
+}
+
+// Join table fo cr many-to-many relationship between Transaction and Product
+// Use this to create more than 1 transaction at once
+model TransactionProduct {
+  id            String       @id @default(cuid())
+  transactionId String?
+  transaction   Transaction? @relation(fields: [transactionId], references: [id])
+  chartId       String
+  chart         Chart        @relation(fields: [chartId], references: [id])
+  quantity      Int
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  message   String
+  star      Int
+  timeStamp DateTime
+}
+
+model Chart {
+  id                 String               @id @default(cuid())
+  userId             String
+  user               User                 @relation(fields: [userId], references: [id])
+  productId          String
+  product            Product              @relation(fields: [productId], references: [id])
+  quantity           Int
+  state              String
+  timeStamp          DateTime
+  TransactionProduct TransactionProduct[]
+}
+
+// Auth JS Schema
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model User {
+  id            String        @id @default(cuid())
+  name          String?
+  email         String?       @unique
+  emailVerified DateTime?     @map("email_verified")
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  Auth          Auth?
+  AuthToken     AuthToken?
+  Address       Address?
+  Shop          Shop[]
+  Transaction   Transaction[]
+  Review        Review?
+  Chart         Chart[]
+
+  @@map("users")
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}

@@ -26,6 +26,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
+      suppressHydrationWarning={true}
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}
@@ -33,3 +34,15 @@ export default function RootLayout({
     </html>
   );
 }
+
+
+// import Image from "next/image";
+// import Hello from "@/app/components/hello";
+
+// export default function Home() {
+//   return (
+//     <div>
+//       <Hello/>
+//     </div>
+//   );
+// }
